@@ -76,14 +76,14 @@ if selected_tab.startswith("Tab 1"):
     st.subheader("Swarna Rekha Canal Route & Tigra Reservoir Contamination Spatial Heatmap")
     
     st.sidebar.header("Map Layer Controls")
-    show_canal = st.sidebar.checkbox("Show Swarna Rekha Canal Route", value=True)
+    show_canal = st.sidebar.checkbox("Show Swarna Rekha Canal Nodes", value=True)
     show_tigra = st.sidebar.checkbox("Show Tigra Reservoir Silt Map", value=True)
     selected_source_inspection = st.sidebar.selectbox("Inspect Contamination Origin:", df_canal["point"].tolist())
 
     col_map, col_analytics = st.columns([2.2, 1])
 
     with col_map:
-        # Custom Heatmap Scale (0.0 Light Yellow -> 20.0 Dark Maroon/Black)
+        # Custom Heatmap Gradient (0.0 Light Yellow -> 20.0 Dark Maroon/Black)
         heatmap_colorscale = [
             [0.0, "#FFFFE0"],   # Light Yellow (0.0)
             [0.2, "#FFD700"],   # Gold/Yellow (4.0)
@@ -93,7 +93,7 @@ if selected_tab.startswith("Tab 1"):
             [1.0, "#1A0000"]    # Dark Near-Black (20.0)
         ]
 
-        # Base Map Plot via Plotly Express
+        # Scatter Mapbox without text overlays on markers for a clean visual
         fig = px.scatter_mapbox(
             df_canal if show_canal else pd.DataFrame(),
             lat="lat",
@@ -102,32 +102,20 @@ if selected_tab.startswith("Tab 1"):
             size="contamination",
             color_continuous_scale=heatmap_colorscale,
             range_color=[0.0, 20.0],
-            text="point",
             hover_name="point",
             hover_data={"source": True, "contrib_pct": ":.1f%", "contamination": ":.1f", "lat": False, "lon": False},
             zoom=10.5,
             center={"lat": 26.2180, "lon": 78.1200},
             height=600,
-            mapbox_style="open-street-map"
+            mapbox_style="carto-darkmatter"
         )
 
-        # Overlay Canal Vector Flow Line
-        if show_canal:
-            fig.add_trace(go.Scattermapbox(
-                lat=df_canal["lat"],
-                lon=df_canal["lon"],
-                mode="lines",
-                line=dict(width=4, color="#E60000"),
-                name="Swarna Rekha Flow Vector",
-                hoverinfo="none"
-            ))
-
-        # Overlay Tigra Reservoir Silt Deposits
+        # Add Tigra Reservoir Silt Deposits
         if show_tigra:
             fig.add_trace(go.Scattermapbox(
                 lat=df_tigra["lat"],
                 lon=df_tigra["lon"],
-                mode="markers+text",
+                mode="markers",
                 marker=dict(
                     size=df_tigra["silt_level_ntu"] * 1.2 + 8,
                     color=df_tigra["silt_level_ntu"],
@@ -135,18 +123,18 @@ if selected_tab.startswith("Tab 1"):
                     opacity=0.85
                 ),
                 text=df_tigra["sector"],
-                textposition="bottom center",
+                hovertemplate="<b>%{text}</b><br>Silt Level: %{marker.color} NTU<extra></extra>",
                 name="Tigra Reservoir Silt Deposits"
             ))
 
         fig.update_layout(
             margin={"r": 0, "t": 0, "l": 0, "b": 0},
             showlegend=True,
-            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(255,255,255,0.8)"),
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(15,23,42,0.8)"),
             coloraxis_colorbar=dict(
                 title="Contamination Scale",
-                x=1.02,
-                len=0.8
+                x=1.01,
+                len=0.85
             )
         )
 
