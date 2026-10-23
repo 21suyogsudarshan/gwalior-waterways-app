@@ -1,7 +1,10 @@
 import streamlit as st
+import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
+import random
+import time
 
 # Page Layout Configuration
 st.set_page_config(
@@ -33,7 +36,7 @@ selected_tab = st.radio(
 st.divider()
 
 # ---------------------------------------------------------
-# SWARNA REKHA CANAL ROUTE DATA (Gwalior City GPS Points)
+# SWARNA REKHA CANAL ROUTE DATA
 # ---------------------------------------------------------
 canal_route_data = [
     {"point": "Hanuman Bandh (Canal Origin)", "lat": 26.1950, "lon": 78.1450, "contamination": 1.2, "source": "Clean Inlet Stream", "contrib_pct": 0.0},
@@ -44,19 +47,14 @@ canal_route_data = [
     {"point": "Hazira Industrial Belt", "lat": 26.2400, "lon": 78.1880, "contamination": 19.8, "source": "Hazira Chemical & Dye Discharge", "contrib_pct": 8.5},
     {"point": "Gwalior Outskirts / Morena Exit", "lat": 26.2700, "lon": 78.2050, "contamination": 20.0, "source": "Downstream Agricultural Runoff", "contrib_pct": 7.0}
 ]
-
 df_canal = pd.DataFrame(canal_route_data)
 
-# ---------------------------------------------------------
-# ACCURATE TIGRA RESERVOIR SILT DATA (Centered on Tigra Dam)
-# ---------------------------------------------------------
 tigra_silt_data = [
     {"sector": "Tigra Dam Main Spillway Zone", "lat": 26.2150, "lon": 78.0120, "silt_level_ntu": 4.2, "status": "Low Silt"},
     {"sector": "Sank River Inflow Mouth", "lat": 26.2080, "lon": 78.0010, "silt_level_ntu": 18.6, "status": "Critical Silt Deposit"},
     {"sector": "Kullu Catchment Basin", "lat": 26.2210, "lon": 78.0180, "silt_level_ntu": 12.4, "status": "Moderate Silt"},
     {"sector": "Southern Feeder Channel", "lat": 26.1980, "lon": 78.0060, "silt_level_ntu": 15.8, "status": "High Silt"}
 ]
-
 df_tigra = pd.DataFrame(tigra_silt_data)
 
 tigra_inflow_origins = [
@@ -65,7 +63,6 @@ tigra_inflow_origins = [
     {"Origin": "Upstream Livestock Grazing Outfalls", "Contribution_Pct": 16.5, "Primary_Contaminant": "Organic Carbon (BOD/COD)", "Severity": "Moderate"},
     {"Origin": "Gwalior Municipal Intake Spillover", "Contribution_Pct": 10.0, "Primary_Contaminant": "Total Dissolved Solids (TDS)", "Severity": "Low"}
 ]
-
 df_inflow = pd.DataFrame(tigra_inflow_origins)
 
 # ---------------------------------------------------------
@@ -84,41 +81,27 @@ if selected_tab.startswith("Tab 1"):
 
     with col_map:
         fig = go.Figure()
-
-        # Custom Heatmap Colorscale (0.0 Yellow -> 20.0 Dark Maroon/Black)
         heatmap_colorscale = [
-            [0.0, "#FFFFE0"],   # Light Yellow (0.0)
-            [0.2, "#FFD700"],   # Gold/Yellow (4.0)
-            [0.4, "#FF7F00"],   # Orange (8.0)
-            [0.6, "#E60000"],   # Red (12.0)
-            [0.8, "#800000"],   # Dark Maroon (16.0)
-            [1.0, "#1A0000"]    # Dark Near-Black (20.0)
+            [0.0, "#FFFFE0"], [0.2, "#FFD700"], [0.4, "#FF7F00"],
+            [0.6, "#E60000"], [0.8, "#800000"], [1.0, "#1A0000"]
         ]
 
-        # 1. Progressive Color Flow Vector
         if show_flow_line:
             fig.add_trace(go.Scattermapbox(
-                lat=df_canal["lat"],
-                lon=df_canal["lon"],
-                mode="lines",
-                line=dict(width=5, color="#00BFFF"),
-                name="Swarna Rekha Flow Vector",
-                hoverinfo="none"
+                lat=df_canal["lat"], lon=df_canal["lon"],
+                mode="lines", line=dict(width=5, color="#00BFFF"),
+                name="Swarna Rekha Flow Vector", hoverinfo="none"
             ))
 
-        # 2. Canal Contamination Nodes (Size & Darkening Gradient)
         if show_canal:
             fig.add_trace(go.Scattermapbox(
-                lat=df_canal["lat"],
-                lon=df_canal["lon"],
+                lat=df_canal["lat"], lon=df_canal["lon"],
                 mode="markers",
                 marker=dict(
                     size=df_canal["contamination"] * 1.8 + 12,
                     color=df_canal["contamination"],
                     colorscale=heatmap_colorscale,
-                    cmin=0.0,
-                    cmax=20.0,
-                    showscale=True,
+                    cmin=0.0, cmax=20.0, showscale=True,
                     colorbar=dict(title="Contamination Scale", x=1.01, len=0.85)
                 ),
                 text=df_canal["point"],
@@ -126,19 +109,14 @@ if selected_tab.startswith("Tab 1"):
                 name="Swarna Rekha Heat Nodes"
             ))
 
-        # 3. Corrected Tigra Dam Silt Deposits Layer
         if show_tigra:
             fig.add_trace(go.Scattermapbox(
-                lat=df_tigra["lat"],
-                lon=df_tigra["lon"],
+                lat=df_tigra["lat"], lon=df_tigra["lon"],
                 mode="markers",
                 marker=dict(
                     size=df_tigra["silt_level_ntu"] * 1.5 + 10,
                     color=df_tigra["silt_level_ntu"],
-                    colorscale="Oranges",
-                    cmin=0.0,
-                    cmax=25.0,
-                    opacity=0.9
+                    colorscale="Oranges", cmin=0.0, cmax=25.0, opacity=0.9
                 ),
                 text=df_tigra["sector"],
                 hovertemplate="<b>%{text}</b><br>Silt Density: %{marker.color} NTU<extra></extra>",
@@ -152,8 +130,7 @@ if selected_tab.startswith("Tab 1"):
                 zoom=10.2
             ),
             margin={"r": 0, "t": 0, "l": 0, "b": 0},
-            height=600,
-            showlegend=True,
+            height=600, showlegend=True,
             legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(15,23,42,0.8)")
         )
 
@@ -161,25 +138,18 @@ if selected_tab.startswith("Tab 1"):
 
     with col_analytics:
         st.markdown("### Point Source Contamination Breakdown")
-        
         inspected_row = df_canal[df_canal["point"] == selected_source_inspection].iloc[0]
-        
         st.info(f"**Inspected Point:** {inspected_row['point']}")
         st.metric(label="Contamination Severity Level", value=f"{inspected_row['contamination']} / 20.0")
         st.metric(label="Direct Point-Source Contribution", value=f"+{inspected_row['contrib_pct']}%", delta=f"{inspected_row['source']}")
-        
         st.divider()
-        
         st.markdown("### Tigra Reservoir Inflow Contamination Origins")
-        st.caption("City/Catchment sources contributing to Tigra Dam raw water inflow:")
-        
         for idx, row in df_inflow.iterrows():
             st.write(f"**{row['Origin']}**: `{row['Contribution_Pct']}%` contribution")
             st.caption(f"Contaminant Type: {row['Primary_Contaminant']} | Severity: {row['Severity']}")
             st.progress(row['Contribution_Pct'] / 100.0)
 
     st.divider()
-
     st.markdown("### Swarna Rekha Canal Longitudinal Contamination Gradient & Source Attribution")
     st.dataframe(
         df_canal[["point", "contamination", "source", "contrib_pct"]].rename(columns={
@@ -192,7 +162,91 @@ if selected_tab.startswith("Tab 1"):
     )
 
 elif selected_tab.startswith("Tab 2"):
-    st.info("Tab 2: Optical & Electrochemical Signal Engine (Ready for Integration)")
+    st.subheader("Optical & Electrochemical Edge-DSP Telemetry Engine")
+    st.caption("Real-Time Dual-Wavelength Spectrophotometry & AC Impedance Signal Processing (ESP32-S3 Core)")
+
+    # Sidebar Interactive Controls for Live DSP Demo
+    st.sidebar.header("Signal Engine Controls")
+    node_select = st.sidebar.selectbox("Select Active Telemetry Node:", df_canal["point"].tolist())
+    sim_noise = st.sidebar.slider("Simulated River Turbulence / Wave Noise:", 0.0, 1.0, 0.15)
+    inject_spill = st.sidebar.checkbox("Inject Simulated Sewage Discharge Spike", value=False)
+
+    # Ingest baseline contamination level based on selected node
+    curr_node_data = df_canal[df_canal["point"] == node_select].iloc[0]
+    base_contam = curr_node_data["contamination"]
+    if inject_spill:
+        base_contam += 8.5
+
+    # Generate Synthetic High-Frequency DSP Signal Arrays (100 Data Points)
+    np.random.seed(42)
+    time_ms = np.linspace(0, 1000, 100) # 1 second window
+    
+    # 1. Raw 254 nm UV Photodiode Channel (Volts)
+    uv_raw = 2.8 - (base_contam * 0.11) + np.random.normal(0, sim_noise * 0.15, 100)
+    # Filtered 254 nm Channel (Kalman/Moving Average)
+    uv_filtered = pd.Series(uv_raw).rolling(window=5, min_periods=1).mean().values
+
+    # 2. Raw 880 nm IR Nephelometric Scatter Channel (Volts)
+    ir_scatter = 0.4 + (base_contam * 0.08) + np.random.normal(0, sim_noise * 0.1, 100)
+
+    # 3. Calculated Beer-Lambert SAC254 (m^-1)
+    sac_254 = (100 / 1.0) * np.log10(3.3 / np.clip(uv_filtered, 0.1, 3.2))
+
+    # Top Metric Summary Row
+    col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+    with col_m1:
+        st.metric("254nm UV Absorbance (SAC254)", f"{sac_254[-1]:.2f} m⁻¹", delta="+Organic Load" if inject_spill else "Stable")
+    with col_m2:
+        st.metric("880nm IR Scatter (Turbidity)", f"{ir_scatter[-1]*15.2:.1f} NTU")
+    with col_m3:
+        st.metric("AC Excitation Conductivity", f"{320 + base_contam*28.5:.0f} µS/cm")
+    with col_m4:
+        st.metric("AFE Signal-to-Noise Ratio", f"{28.4 - sim_noise*12:.1f} dB", delta="-Turbulence" if sim_noise > 0.4 else "Nominal")
+
+    st.divider()
+
+    # Layout: Dual-Channel Signal Plots
+    col_sig1, col_sig2 = st.columns(2)
+
+    with col_sig1:
+        st.markdown("### Dual-Wavelength Optical Telemetry Stream")
+        fig_opt = go.Figure()
+        fig_opt.add_trace(go.Scatter(x=time_ms, y=uv_raw, mode="lines", name="Raw 254nm UV (Noisy)", line=dict(color="#FF4B4B", width=1, dash="dot")))
+        fig_opt.add_trace(go.Scatter(x=time_ms, y=uv_filtered, mode="lines", name="Filtered 254nm UV (Organic)", line=dict(color="#00BFFF", width=2.5)))
+        fig_opt.add_trace(go.Scatter(x=time_ms, y=ir_scatter, mode="lines", name="880nm IR Scatter (Silt/Turbidity)", line=dict(color="#FFA500", width=2)))
+        
+        fig_opt.update_layout(
+            xaxis_title="Sample Time (ms)", yaxis_title="Photodiode AFE Voltage (V)",
+            template="plotly_dark", height=380, margin=dict(l=10, r=10, t=30, b=10),
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01)
+        )
+        st.plotly_chart(fig_opt, use_container_width=True)
+
+    with col_sig2:
+        st.markdown("### Beer-Lambert Organic Absorption ($SAC_{254}$) Curve")
+        fig_sac = go.Figure()
+        fig_sac.add_trace(go.Scatter(x=time_ms, y=sac_254, mode="lines", fill="tozeroy", name="SAC254 Organic Absorption", line=dict(color="#22C55E", width=2)))
+        
+        fig_sac.update_layout(
+            xaxis_title="Sample Time (ms)", yaxis_title="SAC254 Coefficient (m⁻¹)",
+            template="plotly_dark", height=380, margin=dict(l=10, r=10, t=30, b=10)
+        )
+        st.plotly_chart(fig_sac, use_container_width=True)
+
+    st.divider()
+
+    # Raw Serial Output Console
+    st.markdown("### Edge-Node Hardware Raw Telemetry Terminal (UART Serial Stream @ 115200 Baud)")
+    
+    timestamp_str = time.strftime("%H:%M:%S")
+    serial_log = f"""
+    [{timestamp_str}.102] RX <- $AIRAVAT_NODE_03,NODE_ID=SWARNA_REKHA_03,GPS=26.2080N 78.1620E
+    [{timestamp_str}.145] DSP -> Executing 2nd-Order Sallen-Key Low Pass Filtering (fc = 2.4 kHz)...
+    [{timestamp_str}.189] OPTICAL -> UV_254_RAW={uv_raw[-1]:.3f}V | UV_254_FILT={uv_filtered[-1]:.3f}V | IR_880_SCATTER={ir_scatter[-1]:.3f}V
+    [{timestamp_str}.210] MATH -> Derived SAC_254 = {sac_254[-1]:.2f} m^-1 | Differential Subtraction Status = OK
+    [{timestamp_str}.250] TX -> Packet Encapsulated (CBOR 64 Bytes) -> Transmitting via LoRaWAN / 4G Cellular...
+    """
+    st.code(serial_log, language="text")
 
 elif selected_tab.startswith("Tab 3"):
     st.info("Tab 3: Surrogate Water Metrics & Alerts (Ready for Integration)")
