@@ -11,17 +11,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Plotly Version Auto-Compatibility Fix
-if hasattr(go, "Scattermap"):
-    ScatterMapTrace = go.Scattermap
-    mapbox_layout_key = "map"
-elif hasattr(go, "Scattermapbox"):
-    ScatterMapTrace = go.Scattermapbox
-    mapbox_layout_key = "mapbox"
-else:
-    ScatterMapTrace = go.Scattergeo
-    mapbox_layout_key = "geo"
-
 st.title("Gwalior Waterways Real-Time Auditing Console")
 st.caption("Monitoring Swarna Rekha Canal & Tigra Reservoir | Edge-DSP Optical & Electrochemical Telemetry")
 
@@ -94,8 +83,7 @@ if selected_tab.startswith("Tab 1"):
     col_map, col_analytics = st.columns([2.2, 1])
 
     with col_map:
-        fig = go.Figure()
-
+        # Custom Heatmap Color Scale matching reference image (0.0 Yellow -> 20.0 Dark Maroon/Black)
         heatmap_colorscale = [
             [0.0, "#FFFFE0"],   # Light Yellow (0.0)
             [0.2, "#FFD700"],   # Gold/Yellow (4.0)
@@ -105,8 +93,27 @@ if selected_tab.startswith("Tab 1"):
             [1.0, "#1A0000"]    # Dark Near-Black (20.0)
         ]
 
+        # Use Plotly Express Mapbox scatter for cross-version stability
+        fig = px.scatter_mapbox(
+            df_canal if show_canal else pd.DataFrame(),
+            lat="lat",
+            lon="lon",
+            color="contamination",
+            size="contamination",
+            color_continuous_scale=heatmap_colorscale,
+            range_color=[0.0, 20.0],
+            text="point",
+            hover_name="point",
+            hover_data={"source": True, "contrib_pct": ":.1f%", "contamination": ":.1f", "lat": False, "lon": False},
+            zoom=10.5,
+            center={"lat": 26.2180, "lon": 78.1200},
+            height=600,
+            mapbox_style="carto-positron"
+        )
+
+        # Add Swarna Rekha Vector Line
         if show_canal:
-            fig.add_trace(ScatterMapTrace(
+            fig.add_trace(go.Scattermapbox(
                 lat=df_canal["lat"],
                 lon=df_canal["lon"],
                 mode="lines",
@@ -115,36 +122,9 @@ if selected_tab.startswith("Tab 1"):
                 hoverinfo="none"
             ))
 
-            fig.add_trace(ScatterMapTrace(
-                lat=df_canal["lat"],
-                lon=df_canal["lon"],
-                mode="markers+text",
-                marker=dict(
-                    size=df_canal["contamination"] * 1.8 + 10,
-                    color=df_canal["contamination"],
-                    colorscale=heatmap_colorscale,
-                    cmin=0.0,
-                    cmax=20.0,
-                    showscale=True,
-                    colorbar=dict(
-                        title="Contamination Level<br>(0.0 Safe - 20.0 Critical)",
-                        titleside="top",
-                        ticks="outside",
-                        dtick=2.5
-                    )
-                ),
-                text=df_canal["point"],
-                textposition="top right",
-                customdata=np.stack((df_canal["source"], df_canal["contrib_pct"], df_canal["contamination"]), axis=-1),
-                hovertemplate="<b>%{text}</b><br>" +
-                              "Contamination Index: <b>%{customdata[2]}/20.0</b><br>" +
-                              "Primary Source: %{customdata[0]}<br>" +
-                              "Point Contribution: <b>+%{customdata[1]}%</b><extra></extra>",
-                name="Canal Contamination Nodes"
-            ))
-
+        # Add Tigra Reservoir Silt Deposits
         if show_tigra:
-            fig.add_trace(ScatterMapTrace(
+            fig.add_trace(go.Scattermapbox(
                 lat=df_tigra["lat"],
                 lon=df_tigra["lon"],
                 mode="markers+text",
@@ -156,26 +136,16 @@ if selected_tab.startswith("Tab 1"):
                 ),
                 text=df_tigra["sector"],
                 textposition="bottom left",
-                hovertemplate="<b>%{text}</b><br>" +
-                              "Silt Density: <b>%{marker.color} NTU/m³</b><extra></extra>",
                 name="Tigra Reservoir Silt Deposits"
             ))
 
-        map_config = {
-            "style": "carto-positron",
-            "center": dict(lat=26.2180, lon=78.1200),
-            "zoom": 10.5
-        }
-        
-        layout_args = {
-            mapbox_layout_key: map_config,
-            "margin": {"r": 0, "t": 0, "l": 0, "b": 0},
-            "height": 600,
-            "showlegend": True,
-            "legend": dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(255,255,255,0.8)")
-        }
+        fig.update_layout(
+            margin={"r": 0, "t": 0, "l": 0, "b": 0},
+            showlegend=True,
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(255,255,255,0.8)"),
+            coloraxis_colorbar=dict(title="Contamination<br>(0.0 Safe - 20.0 Critical)")
+        )
 
-        fig.update_layout(**layout_args)
         st.plotly_chart(fig, use_container_width=True)
 
     with col_analytics:
