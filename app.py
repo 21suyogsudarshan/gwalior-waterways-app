@@ -1,5 +1,4 @@
 import streamlit as st
-import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
@@ -84,7 +83,9 @@ if selected_tab.startswith("Tab 1"):
     col_map, col_analytics = st.columns([2.2, 1])
 
     with col_map:
-        # Heatmap Gradient (0.0 Light Yellow -> 20.0 Dark Maroon/Black)
+        fig = go.Figure()
+
+        # Custom Heatmap Colorscale (0.0 Yellow -> 20.0 Dark Maroon/Black)
         heatmap_colorscale = [
             [0.0, "#FFFFE0"],   # Light Yellow (0.0)
             [0.2, "#FFD700"],   # Gold/Yellow (4.0)
@@ -94,34 +95,38 @@ if selected_tab.startswith("Tab 1"):
             [1.0, "#1A0000"]    # Dark Near-Black (20.0)
         ]
 
-        fig = px.scatter_mapbox(
-            df_canal if show_canal else pd.DataFrame(),
-            lat="lat",
-            lon="lon",
-            color="contamination",
-            size="contamination",
-            color_continuous_scale=heatmap_colorscale,
-            range_color=[0.0, 20.0],
-            hover_name="point",
-            hover_data={"source": True, "contrib_pct": ":.1f%", "contamination": ":.1f", "lat": False, "lon": False},
-            zoom=10.5,
-            center={"lat": 26.2180, "lon": 78.1200},
-            height=600,
-            mapbox_style="carto-darkmatter"
-        )
-
-        # Overlay Blue Canal Flow Vector Line
+        # 1. LAYER 1: Blue Canal Water Flow Line
         if show_flow_line:
             fig.add_trace(go.Scattermapbox(
                 lat=df_canal["lat"],
                 lon=df_canal["lon"],
                 mode="lines",
-                line=dict(width=4, color="#1E90FF"),
-                name="Swarna Rekha Blue Water Flow",
+                line=dict(width=5, color="#00BFFF"),
+                name="Swarna Rekha Water Flow",
                 hoverinfo="none"
             ))
 
-        # Overlay Tigra Reservoir Silt Deposits
+        # 2. LAYER 2: Canal Heatmap Nodes
+        if show_canal:
+            fig.add_trace(go.Scattermapbox(
+                lat=df_canal["lat"],
+                lon=df_canal["lon"],
+                mode="markers",
+                marker=dict(
+                    size=df_canal["contamination"] * 1.5 + 12,
+                    color=df_canal["contamination"],
+                    colorscale=heatmap_colorscale,
+                    cmin=0.0,
+                    cmax=20.0,
+                    showscale=True,
+                    colorbar=dict(title="Contamination Scale", x=1.01, len=0.85)
+                ),
+                text=df_canal["point"],
+                hovertemplate="<b>%{text}</b><br>Contamination Index: %{marker.color}/20.0<extra></extra>",
+                name="Canal Contamination Nodes"
+            ))
+
+        # 3. LAYER 3: Tigra Reservoir Silt Deposits
         if show_tigra:
             fig.add_trace(go.Scattermapbox(
                 lat=df_tigra["lat"],
@@ -139,14 +144,15 @@ if selected_tab.startswith("Tab 1"):
             ))
 
         fig.update_layout(
+            mapbox=dict(
+                style="carto-darkmatter",
+                center=dict(lat=26.2180, lon=78.1200),
+                zoom=10.5
+            ),
             margin={"r": 0, "t": 0, "l": 0, "b": 0},
+            height=600,
             showlegend=True,
-            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(15,23,42,0.8)"),
-            coloraxis_colorbar=dict(
-                title="Contamination Scale",
-                x=1.01,
-                len=0.85
-            )
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(15,23,42,0.8)")
         )
 
         st.plotly_chart(fig, use_container_width=True)
