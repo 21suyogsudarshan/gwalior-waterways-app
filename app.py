@@ -77,13 +77,14 @@ if selected_tab.startswith("Tab 1"):
     
     st.sidebar.header("Map Layer Controls")
     show_canal = st.sidebar.checkbox("Show Swarna Rekha Canal Nodes", value=True)
+    show_flow_line = st.sidebar.checkbox("Show Canal Water Blue Flow Line", value=True)
     show_tigra = st.sidebar.checkbox("Show Tigra Reservoir Silt Map", value=True)
     selected_source_inspection = st.sidebar.selectbox("Inspect Contamination Origin:", df_canal["point"].tolist())
 
     col_map, col_analytics = st.columns([2.2, 1])
 
     with col_map:
-        # Custom Heatmap Gradient (0.0 Light Yellow -> 20.0 Dark Maroon/Black)
+        # Heatmap Gradient (0.0 Light Yellow -> 20.0 Dark Maroon/Black)
         heatmap_colorscale = [
             [0.0, "#FFFFE0"],   # Light Yellow (0.0)
             [0.2, "#FFD700"],   # Gold/Yellow (4.0)
@@ -93,7 +94,6 @@ if selected_tab.startswith("Tab 1"):
             [1.0, "#1A0000"]    # Dark Near-Black (20.0)
         ]
 
-        # Scatter Mapbox without text overlays on markers for a clean visual
         fig = px.scatter_mapbox(
             df_canal if show_canal else pd.DataFrame(),
             lat="lat",
@@ -110,7 +110,18 @@ if selected_tab.startswith("Tab 1"):
             mapbox_style="carto-darkmatter"
         )
 
-        # Add Tigra Reservoir Silt Deposits
+        # Overlay Blue Canal Flow Vector Line
+        if show_flow_line:
+            fig.add_trace(go.Scattermapbox(
+                lat=df_canal["lat"],
+                lon=df_canal["lon"],
+                mode="lines",
+                line=dict(width=4, color="#1E90FF"),
+                name="Swarna Rekha Blue Water Flow",
+                hoverinfo="none"
+            ))
+
+        # Overlay Tigra Reservoir Silt Deposits
         if show_tigra:
             fig.add_trace(go.Scattermapbox(
                 lat=df_tigra["lat"],
