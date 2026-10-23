@@ -48,13 +48,13 @@ canal_route_data = [
 df_canal = pd.DataFrame(canal_route_data)
 
 # ---------------------------------------------------------
-# TIGRA RESERVOIR SILT & INFLOW ORIGIN DATA
+# ACCURATE TIGRA RESERVOIR SILT DATA (Centered on Tigra Dam)
 # ---------------------------------------------------------
 tigra_silt_data = [
-    {"sector": "Tigra Spillway Deep Zone", "lat": 26.2167, "lon": 78.0167, "silt_level_ntu": 4.2, "status": "Low Silt"},
-    {"sector": "Sank River Intake Mouth", "lat": 26.2100, "lon": 78.0050, "silt_level_ntu": 18.6, "status": "Critical Silt Deposit"},
-    {"sector": "Kullu Catchment Basin", "lat": 26.2250, "lon": 78.0250, "silt_level_ntu": 12.4, "status": "Moderate Silt"},
-    {"sector": "Southern Feeder Channel", "lat": 26.2020, "lon": 78.0120, "silt_level_ntu": 15.8, "status": "High Silt"}
+    {"sector": "Tigra Dam Main Spillway Zone", "lat": 26.2150, "lon": 78.0120, "silt_level_ntu": 4.2, "status": "Low Silt"},
+    {"sector": "Sank River Inflow Mouth", "lat": 26.2080, "lon": 78.0010, "silt_level_ntu": 18.6, "status": "Critical Silt Deposit"},
+    {"sector": "Kullu Catchment Basin", "lat": 26.2210, "lon": 78.0180, "silt_level_ntu": 12.4, "status": "Moderate Silt"},
+    {"sector": "Southern Feeder Channel", "lat": 26.1980, "lon": 78.0060, "silt_level_ntu": 15.8, "status": "High Silt"}
 ]
 
 df_tigra = pd.DataFrame(tigra_silt_data)
@@ -95,25 +95,25 @@ if selected_tab.startswith("Tab 1"):
             [1.0, "#1A0000"]    # Dark Near-Black (20.0)
         ]
 
-        # 1. LAYER 1: Blue Canal Water Flow Line
+        # 1. Progressive Color Flow Vector
         if show_flow_line:
             fig.add_trace(go.Scattermapbox(
                 lat=df_canal["lat"],
                 lon=df_canal["lon"],
                 mode="lines",
                 line=dict(width=5, color="#00BFFF"),
-                name="Swarna Rekha Water Flow",
+                name="Swarna Rekha Flow Vector",
                 hoverinfo="none"
             ))
 
-        # 2. LAYER 2: Canal Heatmap Nodes
+        # 2. Canal Contamination Nodes (Size & Darkening Gradient)
         if show_canal:
             fig.add_trace(go.Scattermapbox(
                 lat=df_canal["lat"],
                 lon=df_canal["lon"],
                 mode="markers",
                 marker=dict(
-                    size=df_canal["contamination"] * 1.5 + 12,
+                    size=df_canal["contamination"] * 1.8 + 12,
                     color=df_canal["contamination"],
                     colorscale=heatmap_colorscale,
                     cmin=0.0,
@@ -123,31 +123,33 @@ if selected_tab.startswith("Tab 1"):
                 ),
                 text=df_canal["point"],
                 hovertemplate="<b>%{text}</b><br>Contamination Index: %{marker.color}/20.0<extra></extra>",
-                name="Canal Contamination Nodes"
+                name="Swarna Rekha Heat Nodes"
             ))
 
-        # 3. LAYER 3: Tigra Reservoir Silt Deposits
+        # 3. Corrected Tigra Dam Silt Deposits Layer
         if show_tigra:
             fig.add_trace(go.Scattermapbox(
                 lat=df_tigra["lat"],
                 lon=df_tigra["lon"],
                 mode="markers",
                 marker=dict(
-                    size=df_tigra["silt_level_ntu"] * 1.2 + 8,
+                    size=df_tigra["silt_level_ntu"] * 1.5 + 10,
                     color=df_tigra["silt_level_ntu"],
-                    colorscale="YlOrRd",
-                    opacity=0.85
+                    colorscale="Oranges",
+                    cmin=0.0,
+                    cmax=25.0,
+                    opacity=0.9
                 ),
                 text=df_tigra["sector"],
-                hovertemplate="<b>%{text}</b><br>Silt Level: %{marker.color} NTU<extra></extra>",
-                name="Tigra Reservoir Silt Deposits"
+                hovertemplate="<b>%{text}</b><br>Silt Density: %{marker.color} NTU<extra></extra>",
+                name="Tigra Dam Silt Deposits"
             ))
 
         fig.update_layout(
             mapbox=dict(
                 style="carto-darkmatter",
-                center=dict(lat=26.2180, lon=78.1200),
-                zoom=10.5
+                center=dict(lat=26.2100, lon=78.1000),
+                zoom=10.2
             ),
             margin={"r": 0, "t": 0, "l": 0, "b": 0},
             height=600,
