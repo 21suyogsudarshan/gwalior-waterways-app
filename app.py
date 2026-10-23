@@ -1,4 +1,5 @@
 import streamlit as st
+import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
@@ -82,8 +83,7 @@ if selected_tab.startswith("Tab 1"):
     col_map, col_analytics = st.columns([2.2, 1])
 
     with col_map:
-        fig = go.Figure()
-
+        # Custom Heatmap Scale (0.0 Light Yellow -> 20.0 Dark Maroon/Black)
         heatmap_colorscale = [
             [0.0, "#FFFFE0"],   # Light Yellow (0.0)
             [0.2, "#FFD700"],   # Gold/Yellow (4.0)
@@ -93,36 +93,46 @@ if selected_tab.startswith("Tab 1"):
             [1.0, "#1A0000"]    # Dark Near-Black (20.0)
         ]
 
-        # Universal Scatter Plotting Engine
+        # Base Map Plot via Plotly Express
+        fig = px.scatter_mapbox(
+            df_canal if show_canal else pd.DataFrame(),
+            lat="lat",
+            lon="lon",
+            color="contamination",
+            size="contamination",
+            color_continuous_scale=heatmap_colorscale,
+            range_color=[0.0, 20.0],
+            text="point",
+            hover_name="point",
+            hover_data={"source": True, "contrib_pct": ":.1f%", "contamination": ":.1f", "lat": False, "lon": False},
+            zoom=10.5,
+            center={"lat": 26.2180, "lon": 78.1200},
+            height=600,
+            mapbox_style="open-street-map"
+        )
+
+        # Overlay Canal Vector Flow Line
         if show_canal:
-            fig.add_trace(go.Scatter(
-                x=df_canal["lon"],
-                y=df_canal["lat"],
-                mode="lines+markers",
+            fig.add_trace(go.Scattermapbox(
+                lat=df_canal["lat"],
+                lon=df_canal["lon"],
+                mode="lines",
                 line=dict(width=4, color="#E60000"),
-                marker=dict(
-                    size=df_canal["contamination"] * 1.5 + 10,
-                    color=df_canal["contamination"],
-                    colorscale=heatmap_colorscale,
-                    cmin=0.0,
-                    cmax=20.0,
-                    showscale=True,
-                    colorbar=dict(title="Contamination Scale")
-                ),
-                text=df_canal["point"],
-                hovertemplate="<b>%{text}</b><br>Lon: %{x}<br>Lat: %{y}<extra></extra>",
-                name="Swarna Rekha Canal Nodes"
+                name="Swarna Rekha Flow Vector",
+                hoverinfo="none"
             ))
 
+        # Overlay Tigra Reservoir Silt Deposits
         if show_tigra:
-            fig.add_trace(go.Scatter(
-                x=df_tigra["lon"],
-                y=df_tigra["lat"],
+            fig.add_trace(go.Scattermapbox(
+                lat=df_tigra["lat"],
+                lon=df_tigra["lon"],
                 mode="markers+text",
                 marker=dict(
                     size=df_tigra["silt_level_ntu"] * 1.2 + 8,
                     color=df_tigra["silt_level_ntu"],
-                    colorscale="YlOrRd"
+                    colorscale="YlOrRd",
+                    opacity=0.85
                 ),
                 text=df_tigra["sector"],
                 textposition="bottom center",
@@ -130,13 +140,14 @@ if selected_tab.startswith("Tab 1"):
             ))
 
         fig.update_layout(
-            title="Gwalior Waterways GIS Coordinate Projection",
-            xaxis_title="Longitude (°E)",
-            yaxis_title="Latitude (°N)",
-            margin={"r": 10, "t": 40, "l": 10, "b": 10},
-            height=550,
+            margin={"r": 0, "t": 0, "l": 0, "b": 0},
             showlegend=True,
-            template="plotly_dark"
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, bgcolor="rgba(255,255,255,0.8)"),
+            coloraxis_colorbar=dict(
+                title="Contamination Scale",
+                x=1.02,
+                len=0.8
+            )
         )
 
         st.plotly_chart(fig, use_container_width=True)
